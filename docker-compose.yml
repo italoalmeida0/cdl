@@ -1,0 +1,26 @@
+services:
+  cdl:
+    build: .
+    container_name: cdl
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      # Supports root domains or subpaths, e.g.:
+      # BASE_URL: https://example.com/lalala/
+      BASE_URL: ${BASE_URL:-http://localhost:3000}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      # Optional: leave unset to complete first-time setup in the browser
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      # Optional: auto-generated in /data/.secret if omitted
+      CDL_SECRET: ${CDL_SECRET:-}
+      # Enable when running behind Nginx / Caddy / Traefik / Cloudflare
+      TRUST_PROXY: ${TRUST_PROXY:-false}
+    volumes:
+      - cdl-data:/data
+      # Mount any host directory you want to share from (read-only recommended)
+      - ./files:/files:ro
+
+volumes:
+  cdl-data:

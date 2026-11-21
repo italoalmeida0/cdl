@@ -1,0 +1,5 @@
+[test]
+root = "test"
+
+[serve.static]
+plugins = ["./plugins/iconify-solid-plugin.ts", "./plugins/tailwind-plugin.ts", "./plugins/solid-plugin.ts"]

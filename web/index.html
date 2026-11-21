@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="cdl-base" content="{{BASE}}" />
+    <meta name="description" content="CDL — Content Delivery Link. Temporary direct download links for large files." />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#141414" />
+    <title>CDL · Content Delivery Link</title>
+    <script>
+      (function () {
+        try {
+          var ua = navigator.userAgent || "";
+          var ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+          var android = /Android/.test(ua);
+          var touch = "ontouchstart" in window || navigator.maxTouchPoints > 0;
+          var flag = function () {
+            var height = typeof window.innerHeight === "number" ? window.innerHeight : window.innerWidth;
+            var shortEdge = Math.min(window.innerWidth, height);
+            document.documentElement.classList.toggle("mobile", (ios || android) && touch && shortEdge <= 768);
+          };
+          flag();
+          window.addEventListener("resize", flag, { passive: true });
+          window.addEventListener("orientationchange", flag, { passive: true });
+        } catch (e) {}
+      })();
+    </script>
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem("cdl-theme");
+          if (t !== "light" && t !== "dark" && t !== "high-contrast") {
+            t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+          }
+          document.documentElement.dataset.theme = t;
+          var a = localStorage.getItem("cdl-accent");
+          if (a && /^(neutral|violet|blue|green|amber|orange|coral|rose)$/.test(a)) {
+            document.documentElement.dataset.accent = a;
+          }
+        } catch (e) {
+          document.documentElement.dataset.theme = "light";
+        }
+        function iconFor(theme) {
+          var tile = theme === "dark" ? "%23f2f2f5" : "%2318181b";
+          var glyph = theme === "dark" ? "%230f766e" : "%232dd4bf";
+          return (
+            "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E" +
+            "%3Crect width='32' height='32' rx='8' fill='" + tile + "'/%3E" +
+            "%3Cpath d='M16 7.5v11.5m0 0-4.2-4.2M16 19l4.2-4.2M9.5 23.5h13' fill='none' stroke='" + glyph + "' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
+          );
+        }
+        function syncFavicon() {
+          var t = document.documentElement.dataset.theme === "light" ? "light" : "dark";
+          var links = document.querySelectorAll("link[rel='icon']");
+          var link = links[0];
+          for (var i = 1; i < links.length; i++) {
+            if (links[i].parentNode) links[i].parentNode.removeChild(links[i]);
+          }
+          if (!link) {
+            link = document.createElement("link");
+            link.rel = "icon";
+            document.head.appendChild(link);
+          }
+          link.href = iconFor(t);
+        }
+        syncFavicon();
+        function syncThemeColor() {
+          var t = document.documentElement.dataset.theme;
+          var content = t === "high-contrast" ? "#000000" : t === "dark" ? "#141414" : "#ffffff";
+          var metas = document.querySelectorAll('meta[name="theme-color"]');
+          var meta = metas[0];
+          for (var i = 1; i < metas.length; i++) {
+            if (metas[i].parentNode) metas[i].parentNode.removeChild(metas[i]);
+          }
+          if (!meta) {
+            meta = document.createElement("meta");
+            meta.name = "theme-color";
+            document.head.appendChild(meta);
+          }
+          meta.removeAttribute("media");
+          if (meta.getAttribute("content") !== content) meta.setAttribute("content", content);
+        }
+        syncThemeColor();
+        new MutationObserver(function () {
+          syncFavicon();
+          syncThemeColor();
+        }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+      })();
+    </script>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2318181b'/%3E%3Cpath d='M16 7.5v11.5m0 0-4.2-4.2M16 19l4.2-4.2M9.5 23.5h13' fill='none' stroke='%232dd4bf' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="./style.tailwindcss.css" />
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="./src/index.tsx"></script>
+  </body>
+</html>

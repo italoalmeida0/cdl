@@ -1,0 +1,118 @@
+@import "tailwindcss";
+@import "./src/ds/tokens.css";
+@import "./src/ds/components.css" layer(components);
+@import "./src/styles/shell.css";
+
+@custom-variant hover (html:not(.mobile) &:hover, html.mobile &:active);
+@custom-variant hocus (html:not(.mobile) &:hover, html.mobile &:active, &:focus-visible);
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *, [data-theme="high-contrast"], [data-theme="high-contrast"] *));
+
+@theme {
+  --font-sans: var(--font-body);
+  --font-mono: var(--font-code);
+  --font-display: "Geist Variable", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.125rem;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base: 1rem;
+  --text-base--line-height: 1.5rem;
+  --text-lg: 1.125rem;
+  --text-lg--line-height: 1.625rem;
+  --text-xl: 1.375rem;
+  --text-xl--line-height: 1.75rem;
+  --text-2xl: 1.75rem;
+  --text-2xl--line-height: 2.125rem;
+  --text-3xl: 2.25rem;
+  --text-3xl--line-height: 2.5rem;
+  --text-4xl: 3.25rem;
+  --text-4xl--line-height: 1.1;
+
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.375rem;
+  --radius-pill: 9999px;
+
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-subtle: var(--surface-subtle);
+  --color-surface-muted: var(--surface-muted);
+  --color-surface-strong: var(--surface-strong);
+  --color-fg: var(--foreground);
+  --color-fg-secondary: var(--text-secondary);
+  --color-fg-muted: var(--text-muted);
+  --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-subtle: var(--accent-subtle);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+  --color-success-subtle: var(--success-subtle);
+  --color-warning-subtle: var(--warning-subtle);
+  --color-danger-subtle: var(--danger-subtle);
+  --color-info-subtle: var(--info-subtle);
+  --color-tone-teal: var(--tone-teal);
+  --color-tone-sky: var(--tone-sky);
+  --color-tone-orchid: var(--tone-orchid);
+  --color-tone-violet: var(--tone-violet);
+  --color-tone-rose: var(--tone-rose);
+  --color-tone-amber: var(--tone-amber);
+  --color-tone-green: var(--tone-green);
+
+  --color-brand-300: var(--accent);
+  --color-brand-400: var(--accent);
+  --color-brand-500: var(--accent);
+  --color-brand-600: var(--accent-strong);
+  --color-card: var(--surface);
+  --color-elev: var(--surface-muted);
+  --color-line: var(--border);
+}
+
+@theme inline {
+  --radius-control: var(--radius-control);
+  --radius-panel: var(--radius-panel);
+  --radius-surface: var(--radius-surface);
+  --radius-inner: var(--radius-inner);
+  --shadow-resting: var(--shadow-resting);
+  --shadow-raised: var(--shadow-raised);
+  --shadow-floating: var(--shadow-floating);
+  --ease-enter: var(--ease-enter);
+  --ease-exit: var(--ease-exit);
+  --ease-standard: var(--ease-standard);
+  --ease-in-out: var(--ease-in-out);
+  --ease-spring: var(--ease-spring);
+}
+
+:root {
+  --bg-surface: var(--surface);
+  --bg-surface-raised: var(--surface-raised);
+  --bg-surface-muted: var(--surface-muted);
+  --bg-elevated: var(--surface-raised);
+  --fg-primary: var(--foreground);
+  --fg-secondary: var(--text-secondary);
+  --fg-muted: var(--text-muted);
+  --border-default: var(--border);
+  --accent-fg: var(--accent-foreground);
+  --accent-hover: var(--accent-strong);
+  --ring-color: color-mix(in oklab, var(--accent) 22%, transparent);
+  --card: var(--surface);
+  --elev: var(--surface-muted);
+  --line: var(--border);
+  --control-height: var(--control-height-sm);
+  --shadow-control: var(--shadow-resting);
+  --shadow-panel: var(--shadow-raised);
+  --shadow-dialog: var(--shadow-floating);
+  --ease-control: var(--ease-standard);
+}
