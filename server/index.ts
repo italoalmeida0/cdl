@@ -1,3 +1,4 @@
+import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { bootstrapAdminFromEnv } from "./auth";
 import {
   BASE_PATH,
@@ -150,30 +151,147 @@ if (!isTestEnv) {
   }
 }
 
-export const server = isTestEnv
-  ? null
-  : Bun.serve({
-      port: PORT,
-      hostname: HOST,
-      maxRequestBodySize: UPLOAD_CHUNK_MAX_BYTES + 1024 * 1024,
-      idleTimeout: 120,
-      async fetch(req, srv) {
-        try {
-          return await route(req, srv);
-        } catch (e) {
-          if (req.signal.aborted) return new Response(null, { status: 499 });
-          if (e instanceof ApiError) {
-            return err(e.status, e.message, req, e.code);
+function incomingToWebRequest(req: IncomingMessage, res: ServerResponse): Request {
+  const host = req.headers.host || `127.0.0.1:${PORT}`;
+  const url = `http://${host}${req.url || "/"}`;
+  const headers = new Headers();
+  for (const [k, val] of Object.entries(req.headers)) {
+    if (val === undefined) continue;
+    if (Array.isArray(val)) {
+      for (const item of val) headers.append(k, item);
+    } else {
+      headers.set(k, val);
+    }
+  }
+
+  const ac = new AbortController();
+  const onAbort = () => {
+    if (!res.writableFinished) ac.abort();
+  };
+  req.on("aborted", onAbort);
+  res.on("close", onAbort);
+
+  const method = (req.method || "GET").toUpperCase();
+  const hasBody = method !== "GET" && method !== "HEAD";
+  const maxBodyBytes = UPLOAD_CHUNK_MAX_BYTES + 1024 * 1024;
+  let body: ReadableStream<Uint8Array> | undefined;
+
+  if (hasBody) {
+    let seenBytes = 0;
+    body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        req.on("data", (chunk: Buffer | Uint8Array) => {
+          seenBytes += chunk.byteLength;
+          if (seenBytes > maxBodyBytes) {
+            const err = new ApiError(413, "payload too large");
+            controller.error(err);
+            req.destroy();
+            return;
           }
-          console.error(`[HTTP] unhandled error on ${req.method} ${req.url}:`, e);
-          return err(500, "internal error", req);
-        }
+          controller.enqueue(chunk instanceof Uint8Array ? chunk : new Uint8Array(chunk));
+        });
+        req.on("end", () => {
+          try {
+            controller.close();
+          } catch {}
+        });
+        req.on("error", (err) => {
+          try {
+            controller.error(err);
+          } catch {}
+        });
+      },
+      cancel() {
+        req.destroy();
       },
     });
+  }
 
-if (server) {
-  console.log(
-    `[BOOT] CDL listening on http://${server.hostname}:${server.port} (${IS_PROD ? "prod" : "dev"})`,
-  );
-  console.log(`[BOOT] data=${DATA_DIR} files=${FILES_DIR} base=${PUBLIC_BASE_URL || "(auto)"}`);
+  return new Request(url, {
+    method,
+    headers,
+    body,
+    signal: ac.signal,
+    // @ts-expect-error Bun streaming Request body
+    duplex: hasBody ? "half" : undefined,
+  });
 }
+
+async function writeWebResponse(req: IncomingMessage, res: ServerResponse, response: Response): Promise<void> {
+  if (res.headersSent || res.writableEnded || res.destroyed) return;
+
+  const outHeaders: Record<string, string | string[]> = {};
+  const headersAny = response.headers as Headers & { getSetCookie?: () => string[] };
+  const setCookies = typeof headersAny.getSetCookie === "function" ? headersAny.getSetCookie() : [];
+
+  response.headers.forEach((value, key) => {
+    const lower = key.toLowerCase();
+    if (lower === "set-cookie" || lower === "transfer-encoding") return;
+    outHeaders[key] = value;
+  });
+  if (setCookies.length > 0) {
+    outHeaders["set-cookie"] = setCookies;
+  }
+
+  const method = (req.method || "GET").toUpperCase();
+  if (method === "HEAD" || response.status === 204 || response.status === 304) {
+    res.writeHead(response.status, outHeaders);
+    res.end();
+    return;
+  }
+
+  const buf = Buffer.from(await response.arrayBuffer());
+  if (!outHeaders["content-length"]) {
+    outHeaders["content-length"] = String(buf.byteLength);
+  }
+  res.writeHead(response.status, outHeaders);
+  res.end(buf);
+}
+
+export function createHttpServer() {
+  const srv = createServer(async (incoming, res) => {
+    const webReq = incomingToWebRequest(incoming, res);
+    const peerServer = {
+      requestIP: () => ({ address: incoming.socket.remoteAddress ?? "" }),
+      timeout: (_r: Request, sec: number) => {
+        const ms = sec <= 0 ? 0 : sec * 1000;
+        incoming.setTimeout(ms);
+        res.setTimeout(ms);
+        incoming.socket?.setTimeout(ms);
+      },
+      nodeRes: res,
+    };
+
+    try {
+      const response = await route(webReq, peerServer);
+      await writeWebResponse(incoming, res, response);
+    } catch (e) {
+      if (res.headersSent || res.writableEnded || res.destroyed) return;
+      if (webReq.signal.aborted) {
+        res.writeHead(499);
+        res.end();
+        return;
+      }
+      const fallback =
+        e instanceof ApiError ? err(e.status, e.message, webReq, e.code) : err(500, "internal error", webReq);
+      await writeWebResponse(incoming, res, fallback);
+    }
+  });
+  srv.requestTimeout = 0;
+  srv.headersTimeout = 60_000;
+  srv.keepAliveTimeout = 65_000;
+  return srv;
+}
+
+export const server = isTestEnv
+  ? null
+  : (() => {
+      const srv = createHttpServer();
+      srv.listen(PORT, HOST, () => {
+        console.log(
+          `[BOOT] CDL listening on http://${HOST}:${PORT} (${IS_PROD ? "prod" : "dev"})`,
+        );
+        console.log(`[BOOT] data=${DATA_DIR} files=${FILES_DIR} base=${PUBLIC_BASE_URL || "(auto)"}`);
+      });
+      return srv;
+    })();

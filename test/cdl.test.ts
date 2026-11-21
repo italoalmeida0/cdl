@@ -30,7 +30,7 @@ process.env.TRUSTED_PROXY_CIDRS = "127.0.0.1/8,10.0.0.0/8,::1/128";
 process.env.BASE_URL = "https://example.com/lalala/";
 delete process.env.ADMIN_PASSWORD;
 
-const { route } = await import("../server/index");
+const { route, createHttpServer } = await import("../server/index");
 const { db } = await import("../server/db");
 const { totpAt } = await import("../server/crypto");
 const { sweepMaintenance, refreshLinkActivity, computeEffectiveStatus } = await import("../server/links");
@@ -641,5 +641,70 @@ describe("CDL Core Suite", () => {
     expect(sweepRes.expiredLinks).toBeGreaterThanOrEqual(1);
     expect(sweepRes.deletedUploads).toBe(1);
     expect(existsSync(storedPath)).toBe(false);
+  });
+
+  test("11. Real HTTP server preserves exact Content-Length (no Transfer-Encoding: chunked) on multi-chunk streamed downloads", async () => {
+    const bigSize = 1572864; // 1.5 MiB = 3 x 512 KiB chunks
+    const bigBuf = Buffer.alloc(bigSize);
+    for (let i = 0; i < bigBuf.length; i++) bigBuf[i] = (i * 19 + 5) & 0xff;
+    writeFileSync(path.join(testFilesDir, "multi-chunk.bin"), bigBuf);
+
+    const link = (
+      await (
+        await call("POST", "/api/links", {
+          token: accessToken,
+          body: { sourceType: "mount", sourcePath: "multi-chunk.bin", expiryMode: "never" },
+        })
+      ).json()
+    ).link;
+
+    const srv = createHttpServer();
+    await new Promise<void>((resolve) => srv.listen(0, "127.0.0.1", resolve));
+    const port = (srv.address() as { port: number }).port;
+    const base = `http://127.0.0.1:${port}`;
+
+    try {
+      // Full GET over real TCP HTTP
+      const res = await fetch(`${base}/lalala/d/${link.token}/multi-chunk.bin`);
+      expect(res.status).toBe(200);
+      expect(res.headers.get("content-length")).toBe(String(bigSize));
+      expect(res.headers.get("transfer-encoding")).toBeNull();
+      expect(res.headers.get("cache-control")).toContain("no-transform");
+      expect(Buffer.from(await res.arrayBuffer()).equals(bigBuf)).toBe(true);
+
+      // Range GET over real TCP HTTP
+      const rangeRes = await fetch(`${base}/lalala/d/${link.token}/multi-chunk.bin`, {
+        headers: { Range: "bytes=600000-1200000" },
+      });
+      expect(rangeRes.status).toBe(206);
+      expect(rangeRes.headers.get("content-length")).toBe("600001");
+      expect(rangeRes.headers.get("transfer-encoding")).toBeNull();
+      expect(rangeRes.headers.get("content-range")).toBe(`bytes 600000-1200000/${bigSize}`);
+      expect(Buffer.from(await rangeRes.arrayBuffer()).equals(bigBuf.subarray(600000, 1200001))).toBe(true);
+
+      // Chunked PUT upload over real TCP HTTP
+      const upBytes = Buffer.alloc(3000, 0x5a);
+      const upInit = await (
+        await fetch(`${base}/lalala/api/uploads/init`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+          body: JSON.stringify({ filename: "http-up.bin", sizeBytes: upBytes.length }),
+        })
+      ).json();
+      const putRes = await fetch(`${base}/lalala/api/uploads/${upInit.upload.id}/chunk?offset=0`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/octet-stream" },
+        body: upBytes,
+      });
+      expect(putRes.status).toBe(200);
+      const compRes = await fetch(`${base}/lalala/api/uploads/${upInit.upload.id}/complete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+        body: "{}",
+      });
+      expect(compRes.status).toBe(200);
+    } finally {
+      await new Promise<void>((resolve) => srv.close(() => resolve()));
+    }
   });
 });

@@ -1,4 +1,5 @@
 import { open } from "node:fs/promises";
+import type { ServerResponse } from "node:http";
 
 import { BASE_PATH, CDL_SECRET, LIMITS, PUBLIC_BASE_URL, TRUST_PROXY, parseBaseUrl } from "../config";
 import { randomToken, signUnlockCookie, verifyPassword, verifyUnlockCookie } from "../crypto";
@@ -359,7 +360,7 @@ export async function handleDownloadRoute(
   headers.set("Accept-Ranges", "bytes");
   headers.set("ETag", etag);
   headers.set("Last-Modified", lastModified);
-  headers.set("Cache-Control", "private, no-store");
+  headers.set("Cache-Control", "private, no-store, no-transform");
   headers.set("X-Robots-Tag", "noindex, nofollow");
   headers.set("Referrer-Policy", "no-referrer");
 
@@ -473,6 +474,126 @@ export async function handleDownloadRoute(
     } catch {}
   }, LIMITS.heartbeatIntervalMs);
   heartbeat.unref?.();
+
+  // Native node:http ServerResponse streaming path: preserves exact Content-Length
+  // (never falls back to Transfer-Encoding: chunked) even for streamed 1 TB+ files.
+  const nodeRes = server?.nodeRes as ServerResponse | undefined;
+  if (nodeRes) {
+    const plainHeaders: Record<string, string> = {};
+    headers.forEach((value, key) => {
+      plainHeaders[key] = value;
+    });
+
+    const onResClose = () => {
+      if (!nodeRes.writableFinished) {
+        try {
+          abortController.abort(new Error("client_aborted"));
+        } catch {}
+      }
+    };
+    const onAdminOrClientAbort = () => {
+      if (!nodeRes.destroyed && !nodeRes.writableEnded) {
+        try {
+          nodeRes.destroy();
+        } catch {}
+      }
+    };
+
+    nodeRes.on("close", onResClose);
+    abortController.signal.addEventListener("abort", onAdminOrClientAbort, { once: true });
+
+    try {
+      nodeRes.writeHead(status, plainHeaders);
+
+      while (cursor <= endInclusive) {
+        if (abortController.signal.aborted || nodeRes.destroyed) {
+          const reason = String((abortController.signal.reason as Error | undefined)?.message ?? "aborted");
+          cleanup(reason === "aborted_by_admin" ? "killed" : "aborted");
+          return new Response(null, { status });
+        }
+
+        if (maxBytesPerSec > 0) {
+          const nowMs = Date.now();
+          const elapsed = Math.max(0, nowMs - lastRefillMs);
+          if (elapsed > 0) {
+            tokenBudgetBytes = Math.min(maxBytesPerSec, tokenBudgetBytes + (maxBytesPerSec * elapsed) / 1000);
+            lastRefillMs = nowMs;
+          }
+          if (tokenBudgetBytes < 1024) {
+            const waitMs = Math.max(5, Math.ceil(((1024 - tokenBudgetBytes) * 1000) / maxBytesPerSec));
+            await new Promise((r) => setTimeout(r, waitMs));
+            const afterMs = Date.now();
+            tokenBudgetBytes = Math.min(
+              maxBytesPerSec,
+              tokenBudgetBytes + (maxBytesPerSec * Math.max(0, afterMs - lastRefillMs)) / 1000,
+            );
+            lastRefillMs = afterMs;
+          }
+        }
+
+        const remaining = endInclusive - cursor + 1;
+        const maxAllowed = maxBytesPerSec > 0 ? Math.max(1024, Math.floor(tokenBudgetBytes)) : chunkSize;
+        const toRead = Math.min(chunkSize, remaining, maxAllowed);
+        const buf = new Uint8Array(toRead);
+        const { bytesRead } = await fh.read(buf, 0, toRead, cursor);
+
+        if (abortController.signal.aborted || nodeRes.destroyed) {
+          const reason = String((abortController.signal.reason as Error | undefined)?.message ?? "aborted");
+          cleanup(reason === "aborted_by_admin" ? "killed" : "aborted");
+          return new Response(null, { status });
+        }
+
+        if (bytesRead <= 0) {
+          break;
+        }
+
+        const slice = bytesRead === toRead ? buf : buf.subarray(0, bytesRead);
+        cursor += bytesRead;
+        bytesSent += bytesRead;
+        if (maxBytesPerSec > 0) tokenBudgetBytes -= bytesRead;
+        updateTransferProgress(transferId, bytesRead);
+
+        const canContinue = nodeRes.write(slice);
+        if (!canContinue && !nodeRes.destroyed && !abortController.signal.aborted) {
+          await new Promise<void>((resolve) => {
+            const done = () => {
+              nodeRes.off("drain", done);
+              nodeRes.off("close", done);
+              abortController.signal.removeEventListener("abort", done);
+              resolve();
+            };
+            nodeRes.once("drain", done);
+            nodeRes.once("close", done);
+            abortController.signal.addEventListener("abort", done, { once: true });
+          });
+        }
+      }
+
+      if (!nodeRes.destroyed && !nodeRes.writableEnded && !abortController.signal.aborted) {
+        await new Promise<void>((resolve) => {
+          nodeRes.end(() => resolve());
+        });
+        cleanup(bytesSent >= rangeLength ? "completed" : "aborted");
+      } else {
+        const reason = String((abortController.signal.reason as Error | undefined)?.message ?? "aborted");
+        cleanup(reason === "aborted_by_admin" ? "killed" : bytesSent >= rangeLength ? "completed" : "aborted");
+      }
+    } catch {
+      const reason = String((abortController.signal.reason as Error | undefined)?.message ?? "aborted");
+      cleanup(reason === "aborted_by_admin" ? "killed" : "aborted");
+      if (!nodeRes.destroyed) {
+        try {
+          nodeRes.destroy();
+        } catch {}
+      }
+    } finally {
+      nodeRes.off("close", onResClose);
+      abortController.signal.removeEventListener("abort", onAdminOrClientAbort);
+      cleanup(bytesSent >= rangeLength ? "completed" : "aborted");
+    }
+
+    return new Response(null, { status });
+  }
 
   const body = new ReadableStream<Uint8Array>({
     async pull(controller) {
