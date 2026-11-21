@@ -163,12 +163,12 @@ export default function SettingsPage() {
   };
 
   const nginxSnippet = () => {
-    const bp = settings()?.effectiveBasePath || "/lalala";
+    const bp = settings()?.effectiveBasePath || "/cdl";
     return `location ${bp}/ {\n    proxy_pass http://127.0.0.1:3000;\n    proxy_http_version 1.1;\n    proxy_set_header Host $host;\n    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n    proxy_set_header X-Forwarded-Proto $scheme;\n    proxy_buffering off;\n    proxy_request_buffering off;\n    client_max_body_size 0;\n}`;
   };
 
   return (
-    <div class="space-y-6 max-w-4xl">
+    <div class="space-y-6 max-w-5xl mx-auto">
       <PageTitle
         title="Settings"
         subtitle="Configure Base URL / subpath behavior, default link policies, appearance, and admin security."
@@ -196,7 +196,7 @@ export default function SettingsPage() {
             when={!settings()?.envBaseUrlLocked}
             fallback={
               <Alert tone="info" icon={<Icon name={Icons.globe} size={16} />}>
-                <code class="font-mono">BASE_URL</code> is locked by the container environment (<code class="font-mono">{settings()?.envBaseUrl}</code>). Update the container env var to change it.
+                <code class="font-mono">BASE_URL</code> is managed via container environment (<code class="font-mono">{settings()?.envBaseUrl}</code>). Update the container env var to change it.
               </Alert>
             }
           >
@@ -283,16 +283,18 @@ export default function SettingsPage() {
         <div class="px-6 pb-6 space-y-4">
           <div class="space-y-1.5">
             <div class="text-xs font-medium text-fg-secondary">Theme</div>
-            <Segmented
-              value={themeMode()}
-              onChange={(m) => setThemeMode(m)}
-              options={[
-                { value: "system", label: "System" },
-                { value: "light", label: "Light" },
-                { value: "dark", label: "Dark" },
-                { value: "high-contrast", label: "High contrast" },
-              ]}
-            />
+            <div class="max-w-full min-w-0">
+              <Segmented
+                value={themeMode()}
+                onChange={(m) => setThemeMode(m)}
+                options={[
+                  { value: "system", label: "System" },
+                  { value: "light", label: "Light" },
+                  { value: "dark", label: "Dark" },
+                  { value: "high-contrast", label: "Contrast" },
+                ]}
+              />
+            </div>
           </div>
           <div class="space-y-1.5">
             <div class="text-xs font-medium text-fg-secondary">Accent</div>

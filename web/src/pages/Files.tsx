@@ -250,7 +250,7 @@ export default function FilesPage() {
                 </For>
               </div>
 
-              <div class="flex flex-wrap items-center gap-2">
+              <div class="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
                 <input
                   type="search"
                   value={search()}
@@ -260,20 +260,22 @@ export default function FilesPage() {
                     void loadMount(relPath(), v, recursive(), sortBy());
                   }}
                   placeholder="Search mounted files…"
-                  class="ui-field ui-field-sm w-48 sm:w-56"
+                  class="ui-field ui-field-sm w-full sm:w-56"
                 />
-                <Btn
-                  size="sm"
-                  variant={sortBy() === "size" ? "secondary" : "ghost"}
-                  onClick={() => {
-                    const next = sortBy() === "name" ? "size" : sortBy() === "size" ? "mtime" : "name";
-                    setSortBy(next);
-                    void loadMount(relPath(), search(), recursive(), next);
-                  }}
-                >
-                  Sort: {sortBy()}
-                </Btn>
-                <IconBtn icon={Icons.refresh} title="Refresh directory" onClick={() => void loadMount()} />
+                <div class="flex items-center justify-between sm:justify-start gap-2">
+                  <Btn
+                    size="sm"
+                    variant={sortBy() === "size" ? "secondary" : "ghost"}
+                    onClick={() => {
+                      const next = sortBy() === "name" ? "size" : sortBy() === "size" ? "mtime" : "name";
+                      setSortBy(next);
+                      void loadMount(relPath(), search(), recursive(), next);
+                    }}
+                  >
+                    Sort: {sortBy()}
+                  </Btn>
+                  <IconBtn icon={Icons.refresh} title="Refresh directory" onClick={() => void loadMount()} />
+                </div>
               </div>
             </div>
 
@@ -323,10 +325,9 @@ export default function FilesPage() {
                           <div class="text-sm font-medium text-fg truncate">
                             {recursive() ? entry.relPath : entry.name}
                           </div>
-                          <div class="text-xs text-fg-muted flex flex-wrap items-center gap-2">
+                          <div class="text-xs text-fg-muted flex flex-wrap items-center gap-x-3 gap-y-1 mt-0.5">
                             <Show when={!entry.isDir}>
                               <span class="tabular-nums">{fmtBytes(entry.sizeBytes)}</span>
-                              <span>·</span>
                             </Show>
                             <span>{fmtDate(entry.mtimeMs)}</span>
                             <Show when={entry.activeLinksCount > 0}>
@@ -483,9 +484,8 @@ export default function FilesPage() {
                               <Badge tone="accent" size="sm">{u.activeLinksCount} active link(s)</Badge>
                             </Show>
                           </div>
-                          <div class="text-xs text-fg-muted flex flex-wrap gap-2">
+                          <div class="text-xs text-fg-muted flex flex-wrap items-center gap-x-3 gap-y-1 mt-0.5">
                             <span class="tabular-nums">{fmtBytes(u.sizeBytes)}</span>
-                            <span>·</span>
                             <span>{fmtDate(u.completedAt ?? u.createdAt)}</span>
                             <Show when={u.sha256}>
                               <code class="font-mono text-2xs">sha256:{u.sha256!.slice(0, 12)}…</code>

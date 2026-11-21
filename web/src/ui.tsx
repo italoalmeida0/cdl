@@ -327,10 +327,7 @@ export function watchSystemTheme(): void {
 }
 
 export function ThemeToggle(props: { class?: string; tooltipPlacement?: Placement }) {
-  const label = () => {
-    if (themeMode() === "system") return "Theme follows OS. Click to switch";
-    return theme() === "dark" ? "Switch to light theme" : "Switch to dark theme";
-  };
+  const label = () => (theme() === "dark" ? "Switch to light theme" : "Switch to dark theme");
   return (
     <DsTooltip content={label()} placement={props.tooltipPlacement ?? "bottom"}>
       <button

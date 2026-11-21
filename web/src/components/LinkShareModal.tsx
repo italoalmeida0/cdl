@@ -75,7 +75,7 @@ export function LinkShareModal(props: {
       width="max-w-xl"
       footer={
         <>
-          <Btn variant="ghost" onClick={props.onClose}>
+          <Btn variant="ghost" onClick={() => props.onClose()}>
             Close
           </Btn>
           <Show when={props.link}>
@@ -96,15 +96,24 @@ export function LinkShareModal(props: {
             <div class="rounded-panel border border-border bg-surface-subtle p-3 space-y-2">
               <div class="flex items-center justify-between gap-2">
                 <span class="text-xs font-medium text-fg-secondary">Direct download URL</span>
-                <div class="flex items-center gap-1.5">
+                <div class="flex items-center gap-1.5 flex-wrap justify-end">
                   <Show when={l().expiryMode === "sliding"}>
-                    <Badge tone="accent">Debounce {fmtDuration(l().idleTtlSec)}</Badge>
+                    <Badge tone="accent" size="sm">Debounce {fmtDuration(l().idleTtlSec)}</Badge>
+                  </Show>
+                  <Show when={l().expiryMode === "fixed"}>
+                    <Badge tone="info" size="sm">Fixed</Badge>
+                  </Show>
+                  <Show when={l().expiryMode === "never"}>
+                    <Badge tone="neutral" size="sm">Permanent</Badge>
+                  </Show>
+                  <Show when={l().ipWhitelist.length > 0}>
+                    <Badge tone="violet" size="sm">Whitelist ({l().ipWhitelist.length})</Badge>
                   </Show>
                   <Show when={l().hasPassword}>
-                    <Badge tone="amber">Password</Badge>
+                    <Badge tone="amber" size="sm">Password</Badge>
                   </Show>
                   <Show when={l().lockToFirstIp}>
-                    <Badge tone="info">1-IP Lock</Badge>
+                    <Badge tone="info" size="sm">1-IP Lock</Badge>
                   </Show>
                 </div>
               </div>

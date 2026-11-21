@@ -58,13 +58,19 @@ export default function ActivityPage() {
                 { value: "audit", label: "Admin Audit" },
               ]}
             />
-            <Btn variant="secondary" size="sm" onClick={() => void load()}>
+            <Btn variant="secondary" onClick={() => void load()}>
               <Icon name={Icons.refresh} size={14} />
               Refresh
             </Btn>
           </div>
         }
       />
+
+      <Show when={(kind() === "downloads" && events().length > 0) || (kind() === "audit" && auditRows().length > 0)}>
+        <div class="md:hidden text-2xs text-fg-muted px-1">
+          Swipe horizontally to view all table columns.
+        </div>
+      </Show>
 
       <Card>
         <Show when={kind() === "downloads"}>

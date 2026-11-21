@@ -73,7 +73,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { path: "/", label: "Overview", icon: Icons.home },
   { path: "/links", label: "Delivery Links", icon: Icons.link },
-  { path: "/files", label: "Files & Upload", icon: Icons.hardDrive },
+  { path: "/files", label: "Files & Uploads", icon: Icons.hardDrive },
   { path: "/activity", label: "Activity Log", icon: Icons.activity },
   { path: "/settings", label: "Settings", icon: Icons.cog },
 ];
@@ -87,7 +87,7 @@ function RailItem(props: { item: NavItem; current: string }) {
   return (
     <a
       href={`#${props.item.path}`}
-      class="gateway-nav relative z-[1] flex h-9 w-9 lg:w-60 items-center justify-center lg:justify-start lg:px-2.5 gap-2.5"
+      class="gateway-nav relative z-[1] flex h-9 w-9 lg:w-full items-center justify-center lg:justify-start lg:px-2.5 gap-2.5"
       aria-current={active() ? "page" : undefined}
     >
       <span class="gateway-nav-icon inline-flex">
@@ -121,9 +121,9 @@ function AppShell(props: { children: JSX.Element }) {
   const currentPage = () => NAV_ITEMS.find((n) => isActive(n, route().path)) ?? NAV_ITEMS[0]!;
 
   return (
-    <div class="gw-shell min-h-screen bg-background text-fg flex flex-col md:flex-row">
+    <div class="gw-shell min-h-screen overflow-x-clip bg-background text-fg flex flex-col md:flex-row">
       {/* Desktop / Tablet Sidebar */}
-      <aside class="gateway-rail hidden md:flex md:w-16 lg:w-64 shrink-0 flex-col border-r border-border p-3 lg:p-4 sticky top-0 h-screen">
+      <aside class="gateway-rail hidden md:flex md:w-16 lg:w-64 shrink-0 flex-col border-r border-border py-3 px-0 lg:p-4 sticky top-0 h-screen">
         <a
           href="#/"
           class="gw-rail-brand flex items-center justify-center lg:justify-start gap-2.5 px-1 py-1.5 mb-4"
@@ -135,7 +135,7 @@ function AppShell(props: { children: JSX.Element }) {
           </div>
         </a>
 
-        <nav ref={setNav} class="gw-nav relative flex-1 space-y-1">
+        <nav ref={setNav} class="gw-nav relative flex-1 flex flex-col items-center lg:items-stretch space-y-1">
           <span ref={setNavIndicator} class="gateway-nav-indicator" aria-hidden="true" />
           <For each={NAV_ITEMS}>{(item) => <RailItem item={item} current={route().path} />}</For>
         </nav>
@@ -150,7 +150,7 @@ function AppShell(props: { children: JSX.Element }) {
               <div class="text-2xs text-fg-muted">Administrator</div>
             </div>
           </div>
-          <div class="flex items-center gap-1">
+          <div class="flex flex-col lg:flex-row items-center gap-1.5 lg:gap-1">
             <ThemeToggle tooltipPlacement="right" />
             <button
               type="button"
@@ -167,7 +167,7 @@ function AppShell(props: { children: JSX.Element }) {
 
       {/* Mobile Header */}
       <header class="gw-mobile-header md:hidden sticky top-0 z-30 flex items-center justify-between px-4 h-14 border-b border-border bg-surface/90 backdrop-blur">
-        <div class="flex items-center gap-2.5">
+        <div class="flex items-center gap-2.5 min-w-0">
           <button
             type="button"
             aria-label="Open navigation"
@@ -177,9 +177,9 @@ function AppShell(props: { children: JSX.Element }) {
             <Icon name={Icons.menu} size={20} />
           </button>
           <LogoMark class="w-7 h-7" />
-          <span class="text-sm font-medium text-fg">{currentPage().label}</span>
+          <span class="text-sm font-medium text-fg truncate">{currentPage().label}</span>
         </div>
-        <div class="flex items-center gap-1">
+        <div class="flex items-center gap-1 shrink-0">
           <ThemeToggle />
           <button
             type="button"
@@ -193,23 +193,69 @@ function AppShell(props: { children: JSX.Element }) {
       </header>
 
       <Drawer open={mobileNav()} onClose={() => setMobileNav(false)} label="CDL Navigation">
-        <div class="space-y-1 p-2">
-          <For each={NAV_ITEMS}>
-            {(item) => (
-              <a
-                href={`#${item.path}`}
-                onClick={() => setMobileNav(false)}
-                class={`flex items-center gap-3 px-3 py-2.5 rounded-control text-sm font-medium ${
-                  isActive(item, route().path)
-                    ? "bg-surface-muted text-fg"
-                    : "text-fg-secondary hover:bg-surface-subtle hover:text-fg"
-                }`}
+        <div class="flex flex-col h-full">
+          <div class="h-14 px-4 border-b border-border flex items-center justify-between shrink-0">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <LogoMark class="w-7 h-7" />
+              <div class="min-w-0">
+                <div class="brand-wordmark text-sm tracking-tight text-fg leading-none">CDL</div>
+                <div class="text-2xs text-fg-muted mt-0.5 truncate">Content Delivery Link</div>
+              </div>
+            </div>
+            <button
+              type="button"
+              aria-label="Close navigation"
+              onClick={() => setMobileNav(false)}
+              class="ui-icon-button"
+            >
+              <Icon name={Icons.x} size={17} />
+            </button>
+          </div>
+
+          <nav class="flex-1 overflow-y-auto p-3 space-y-1">
+            <For each={NAV_ITEMS}>
+              {(item) => (
+                <a
+                  href={`#${item.path}`}
+                  onClick={() => setMobileNav(false)}
+                  class={`flex items-center gap-3 px-3 py-2.5 rounded-control text-sm font-medium transition-colors ${
+                    isActive(item, route().path)
+                      ? "bg-surface-muted text-fg"
+                      : "text-fg-secondary hover:bg-surface-subtle hover:text-fg"
+                  }`}
+                >
+                  <Icon name={item.icon} size={17} />
+                  <span>{item.label}</span>
+                </a>
+              )}
+            </For>
+          </nav>
+
+          <div class="p-3 border-t border-border-subtle flex items-center justify-between gap-2 shrink-0">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <div class="w-8 h-8 rounded-full bg-accent-subtle text-accent-strong flex items-center justify-center text-xs font-medium uppercase shrink-0">
+                {admin().username.slice(0, 1)}
+              </div>
+              <div class="min-w-0">
+                <div class="text-xs font-medium text-fg truncate">{admin().username}</div>
+                <div class="text-2xs text-fg-muted">Administrator</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-1 shrink-0">
+              <ThemeToggle />
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileNav(false);
+                  void signOut();
+                }}
+                aria-label="Sign out"
+                class="ui-icon-button ui-icon-button-danger"
               >
-                <Icon name={item.icon} size={17} />
-                <span>{item.label}</span>
-              </a>
-            )}
-          </For>
+                <Icon name={Icons.logout} size={17} />
+              </button>
+            </div>
+          </div>
         </div>
       </Drawer>
 

@@ -113,12 +113,13 @@ export function Dialog(props: DialogProps) {
           <div ref={scrim} class="ui-dialog-scrim" aria-hidden="true" />
           <div
             ref={setup}
-            role="dialog"
-            aria-modal="true"
+            role={presence.state() === "closing" ? undefined : "dialog"}
+            aria-modal={presence.state() === "closing" ? undefined : "true"}
             aria-labelledby={titleId}
             aria-describedby={description() ? descriptionId : undefined}
             tabindex="-1"
             data-state={presence.state()}
+            aria-hidden={presence.state() === "closing" ? "true" : undefined}
             class={`ui-dialog flex my-auto min-h-0 w-full flex-col overflow-hidden outline-none ${props.width ?? "max-w-xl"} ${
               props.fullOnMobile !== false ? "ui-dialog-full sm:max-h-[90dvh]" : "max-h-[calc(100dvh-2rem)] sm:max-h-[90dvh]"
             }`}

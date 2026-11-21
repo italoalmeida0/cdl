@@ -23,6 +23,14 @@ import {
   toast,
 } from "../ui";
 
+const STATUS_LABELS: Record<string, string> = {
+  active: "Active",
+  resume_only: "Resume Only",
+  paused: "Paused",
+  expired: "Expired",
+  revoked: "Revoked",
+};
+
 export function LinkDetailModal(props: {
   linkId: string | null;
   onClose: () => void;
@@ -113,7 +121,7 @@ export function LinkDetailModal(props: {
       description={link() ? `${link()!.downloadFilename} · ${fmtBytes(link()!.fileSize)}` : undefined}
       width="max-w-3xl"
       footer={
-        <Btn variant="ghost" onClick={props.onClose}>
+        <Btn variant="ghost" onClick={() => props.onClose()}>
           Close
         </Btn>
       }
@@ -140,7 +148,7 @@ export function LinkDetailModal(props: {
                             : "red"
                     }
                   >
-                    {l().effectiveStatus === "resume_only" ? "Resume Only" : l().effectiveStatus}
+                    {STATUS_LABELS[l().effectiveStatus] ?? l().effectiveStatus}
                   </Badge>
                   <span class="text-sm font-medium text-fg tabular-nums">
                     {l().expiryMode === "never" ? "Never expires" : `Expires in ${timeUntil(l().expiresAt)} (${fmtDate(l().expiresAt)})`}
@@ -173,7 +181,11 @@ export function LinkDetailModal(props: {
             <ModalSection title={`Active streams (${transfers().length})`}>
               <Show
                 when={transfers().length > 0}
-                fallback={<div class="text-xs text-fg-muted py-2">No downloads streaming right now.</div>}
+                fallback={
+                  <div class="rounded-panel border border-border-subtle bg-surface-subtle px-3.5 py-3 text-xs text-fg-muted">
+                    No downloads streaming right now.
+                  </div>
+                }
               >
                 <div class="space-y-2">
                   <For each={transfers()}>
@@ -216,7 +228,11 @@ export function LinkDetailModal(props: {
             >
               <Show
                 when={authIps().length > 0}
-                fallback={<div class="text-xs text-fg-muted py-2">No IP has started downloading yet.</div>}
+                fallback={
+                  <div class="rounded-panel border border-border-subtle bg-surface-subtle px-3.5 py-3 text-xs text-fg-muted">
+                    No IP has started downloading yet.
+                  </div>
+                }
               >
                 <div class="rounded-panel border border-border overflow-hidden">
                   <table class="w-full text-left text-xs">
@@ -251,7 +267,11 @@ export function LinkDetailModal(props: {
             <ModalSection title="Recent request log">
               <Show
                 when={events().length > 0}
-                fallback={<div class="text-xs text-fg-muted py-2">No requests logged yet.</div>}
+                fallback={
+                  <div class="rounded-panel border border-border-subtle bg-surface-subtle px-3.5 py-3 text-xs text-fg-muted">
+                    No requests logged yet.
+                  </div>
+                }
               >
                 <div class="rounded-panel border border-border overflow-x-auto max-h-56 overflow-y-auto">
                   <table class="w-full text-left text-xs">

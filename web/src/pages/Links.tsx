@@ -161,17 +161,19 @@ export default function LinksPage() {
             class="ui-field ui-field-sm"
           />
         </div>
-        <Segmented
-          value={statusFilter()}
-          onChange={setStatusFilter}
-          options={[
-            { value: "all", label: "All", badge: links().length },
-            { value: "active", label: "Active" },
-            { value: "resume_only", label: "Resume Only" },
-            { value: "paused", label: "Paused" },
-            { value: "expired", label: "Expired" },
-          ]}
-        />
+        <div class="max-w-full min-w-0">
+          <Segmented
+            value={statusFilter()}
+            onChange={setStatusFilter}
+            options={[
+              { value: "all", label: "All", badge: links().length },
+              { value: "active", label: "Active" },
+              { value: "resume_only", label: "Resume" },
+              { value: "paused", label: "Paused" },
+              { value: "expired", label: "Expired" },
+            ]}
+          />
+        </div>
       </div>
 
       {/* Links List */}
@@ -249,23 +251,26 @@ export default function LinksPage() {
                       </div>
 
                       <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-fg-secondary">
-                        <span class="font-mono text-fg">{l.downloadFilename}</span>
-                        <span>·</span>
+                        <span class="font-mono text-fg truncate max-w-full">
+                          {l.label !== l.downloadFilename
+                            ? l.downloadFilename
+                            : l.sourceType === "mount"
+                              ? `/${l.sourcePath}`
+                              : "Uploaded file"}
+                        </span>
                         <span class="tabular-nums">{fmtBytes(l.fileSize)}</span>
-                        <span>·</span>
                         <span class="tabular-nums font-medium text-fg">{countdown()}</span>
-                        <span>·</span>
                         <span class="tabular-nums">
                           {l.downloadCount}
                           {l.maxDownloads ? `/${l.maxDownloads}` : ""} dl ({fmtBytes(l.totalBytesServed)} served)
                         </span>
                         <Show when={l.lastActivityAt}>
-                          <span>· Last activity {fmtDate(l.lastActivityAt)}</span>
+                          <span>Last activity {fmtDate(l.lastActivityAt)}</span>
                         </Show>
                       </div>
                     </div>
 
-                    <div class="flex items-center gap-1.5 flex-wrap shrink-0">
+                    <div class="flex items-center gap-1 flex-wrap shrink-0">
                       <Btn size="xs" variant="secondary" onClick={() => void copyWithToast(l.publicUrl, "Direct link copied")}>
                         <Icon name={Icons.copy} size={13} />
                         Copy URL

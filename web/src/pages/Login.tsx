@@ -162,7 +162,7 @@ export default function LoginPage() {
                 autocomplete="new-password"
                 required
               />
-              <Btn type="submit" class="w-full" loading={busy()}>
+              <Btn type="submit" size="lg" class="w-full" loading={busy()}>
                 Create Admin Account
               </Btn>
             </form>
@@ -185,7 +185,7 @@ export default function LoginPage() {
                 autocomplete="current-password"
                 required
               />
-              <Btn type="submit" class="w-full" loading={busy()}>
+              <Btn type="submit" size="lg" class="w-full" loading={busy()}>
                 Sign In
               </Btn>
             </form>
@@ -205,7 +205,7 @@ export default function LoginPage() {
                 autocomplete="one-time-code"
                 required
               />
-              <Btn type="submit" class="w-full" loading={busy()}>
+              <Btn type="submit" size="lg" class="w-full" loading={busy()}>
                 Verify &amp; Enter
               </Btn>
               <button

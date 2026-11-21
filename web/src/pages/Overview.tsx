@@ -46,6 +46,22 @@ interface OverviewData {
   recentEvents: DownloadEventDto[];
 }
 
+const STATUS_LABELS: Record<string, string> = {
+  active: "Active",
+  resume_only: "Resume Only",
+  paused: "Paused",
+  expired: "Expired",
+  revoked: "Revoked",
+};
+
+function compactMountPath(full: string): string {
+  if (full.length <= 28) return full;
+  const parts = full.split(/[\\/]/).filter(Boolean);
+  if (parts.length <= 2) return full;
+  const prefix = full.startsWith("/") ? "/" : `${parts[0]}\\`;
+  return `${prefix}…/${parts[parts.length - 1]}`;
+}
+
 export default function OverviewPage() {
   const [data, setData] = createSignal<OverviewData | null>(null);
   const [defaults, setDefaults] = createSignal<LinkPolicyDefaults | null>(null);
@@ -100,7 +116,7 @@ export default function OverviewPage() {
           <div class="flex items-center gap-2">
             <Btn variant="secondary" onClick={() => navigate("/files")}>
               <Icon name={Icons.upload} size={15} />
-              Files &amp; Upload
+              Files &amp; Uploads
             </Btn>
             <Btn onClick={() => setComposerOpen(true)}>
               <Icon name={Icons.plus} size={15} />
@@ -161,8 +177,8 @@ export default function OverviewPage() {
               {data()?.mount.readable ? "Connected" : "Unavailable"}
             </Badge>
           </div>
-          <div class="text-xs text-fg-muted font-mono truncate mt-1.5">
-            {data()?.mount.path ?? "/files"}
+          <div class="text-xs text-fg-muted font-mono truncate mt-1.5" title={data()?.mount.path ?? "/files"}>
+            {compactMountPath(data()?.mount.path ?? "/files")}
           </div>
         </Card>
       </div>
@@ -221,8 +237,8 @@ export default function OverviewPage() {
       </Card>
 
       {/* Recent Links & Recent Activity */}
-      <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <Card>
+      <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 items-stretch">
+        <Card class="flex flex-col h-full">
           <CardHeader
             title="Recent links"
             right={
@@ -231,10 +247,14 @@ export default function OverviewPage() {
               </Btn>
             }
           />
-          <div class="px-6 pb-5">
+          <div class="px-6 pb-5 flex-1 flex flex-col">
             <Show
               when={(data()?.recentLinks.length ?? 0) > 0}
-              fallback={<EmptyState icon={Icons.link} title="No links yet" hint="Create your first direct download link." />}
+              fallback={
+                <div class="flex-1 flex items-center justify-center">
+                  <EmptyState icon={Icons.link} title="No links yet" hint="Create your first direct download link." />
+                </div>
+              }
             >
               <div class="divide-y divide-border-subtle">
                 <For each={data()?.recentLinks ?? []}>
@@ -255,7 +275,7 @@ export default function OverviewPage() {
                             }
                             size="sm"
                           >
-                            {l.effectiveStatus === "resume_only" ? "Resume Only" : l.effectiveStatus}
+                            {STATUS_LABELS[l.effectiveStatus] ?? l.effectiveStatus}
                           </Badge>
                         </div>
                         <div class="text-xs text-fg-muted mt-0.5 tabular-nums truncate">
@@ -275,7 +295,7 @@ export default function OverviewPage() {
           </div>
         </Card>
 
-        <Card>
+        <Card class="flex flex-col h-full">
           <CardHeader
             title="Recent download activity"
             right={
@@ -284,10 +304,14 @@ export default function OverviewPage() {
               </Btn>
             }
           />
-          <div class="px-6 pb-5">
+          <div class="px-6 pb-5 flex-1 flex flex-col">
             <Show
               when={(data()?.recentEvents.length ?? 0) > 0}
-              fallback={<EmptyState icon={Icons.activity} title="No downloads yet" hint="Shared link access events appear here." />}
+              fallback={
+                <div class="flex-1 flex items-center justify-center">
+                  <EmptyState icon={Icons.activity} title="No downloads yet" hint="Shared link access events appear here." />
+                </div>
+              }
             >
               <div class="divide-y divide-border-subtle">
                 <For each={data()?.recentEvents ?? []}>

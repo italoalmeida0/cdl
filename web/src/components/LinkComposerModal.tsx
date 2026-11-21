@@ -643,15 +643,17 @@ export function LinkComposerModal(props: {
           title="2. Expiration mode"
           subtitle="Active transfers are never cut off mid-download."
           action={
-            <Segmented
-              value={expiryMode()}
-              onChange={(m) => setExpiryMode(m)}
-              options={[
-                { value: "sliding", label: "Auto-expire (Debounce)" },
-                { value: "fixed", label: "Fixed timer" },
-                { value: "never", label: "Never" },
-              ]}
-            />
+            <div class="max-w-full min-w-0">
+              <Segmented
+                value={expiryMode()}
+                onChange={(m) => setExpiryMode(m)}
+                options={[
+                  { value: "sliding", label: "Debounce" },
+                  { value: "fixed", label: "Fixed" },
+                  { value: "never", label: "Never" },
+                ]}
+              />
+            </div>
           }
         >
           <Show when={expiryMode() === "sliding"}>
